@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aeronautical Interface Pro</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./assets/css/stylesInd.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>
+                    <i class="fas fa-plane"></i>
+                    Aeronautical Interface Pro
+                </h2>
+                <div class="search-bar">
+                    <input type="text" placeholder="Search for points or features...">
+                    <i class="fas fa-search"></i>
+                </div>
+            </div>
+            <div class="surface-controls" id="surface-controls">
+                <div class="layer-group">
+                    <div class="layer-group-title">
+                        <i class="fas fa-compass"></i> Navigation
+                    </div>
+                    <div class="surface-item navigation-item">
+                        <button id="reset-view"><i class="fas fa-sync"></i> Reset View</button>
+                        <button id="airport-zoom"><i class="fas fa-plane"></i> Airport View</button>
+                    </div>
+                    <div class="surface-item navigation-item">
+                        <button id="toggle-3d"><i class="fas fa-cube"></i> Toggle 3D</button>
+                        <button id="mini-map"><i class="fas fa-map"></i> Mini Map</button>
+                    </div>
+                    <label><input type="checkbox" class="layer-checkbox" id="postgres-layers"> Couches PostGIS</label>
+
+                    <div class="surface-item navigation-item">
+                        <button id="obstacles-toggle"><i class="fas fa-exclamation-triangle"></i> Obstacles</button>
+                        <button id="import-kml"><i class="fas fa-file-import"></i> Import KML</button>
+                        <input type="file" id="kml-file-input" accept=".kml" style="display: none;">
+                    </div>
+                </div>
+                <div class="layer-group">
+                    <div class="layer-group-title">
+                        <i class="fas fa-layer-group"></i> Approach Procedures
+                    </div>
+                    <div class="surface-item">
+                        <button id="toggle-all">Toggle All</button>
+                        <button id="save-view">Save View</button>
+                    </div>
+                    <div class="surface-item">
+                        <input type="checkbox" id="initial-approach" class="layer-checkbox">
+                        <label for="initial-approach" class="surface-info">Initial Approach</label>
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="surface-item">
+                        <input type="checkbox" id="intermediate-approach" class="layer-checkbox">
+                        <label for="intermediate-approach" class="surface-info">Intermediate Approach</label>
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="surface-item">
+                        <input type="checkbox" id="final-approach" class="layer-checkbox">
+                        <label for="final-approach" class="surface-info">Final Approach</label>
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="surface-item">
+                        <input type="checkbox" id="missed-approach" class="layer-checkbox">
+                        <label for="missed-approach" class="surface-info">Missed Approach</label>
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="surface-item">
+                        <input type="checkbox" id="arrival-msa" class="layer-checkbox">
+                        <label for="arrival-msa" class="surface-info">Arrival MSA</label>
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="map-controls">
+                <button class="control-button zoom-button" id="zoom-in"><i class="fas fa-plus"></i></button>
+                <button class="control-button zoom-button" id="zoom-out"><i class="fas fa-minus"></i></button>
+            </div>
+            <div class="map-info" id="map-details">
+                <div>Zoom: -</div>
+                <div>Lat: - | Lon: -</div>
+                <div><i class="fas fa-exclamation-triangle"></i> Elevation: -</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+
+    <script src="https://unpkg.com/@tmcw/togeojson@5.0.0/dist/togeojson.umd.js"></script> <!-- Library to convert KML to GeoJSON -->
+    <script src="/assets/js/scriptInd.js"></script>
+</body>
+</html>
