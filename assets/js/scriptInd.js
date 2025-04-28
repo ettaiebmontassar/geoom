@@ -7,23 +7,14 @@ const CONFIG = {
         center: [10.2217, 36.8517] // Example coordinates (Tunis-Carthage Airport)
     },
     layerSets: {
-
-        
-
-
-    'postgres-layers': [
-    //{ id: 'pg-annotation', url: 'http://localhost:3001/geojson/annotation', color: '#1abc9c' },
-    { id: 'pg-ref-lines', url: 'http://localhost:3001/geojson/ref_lines', color: '#9b59b6' },
-    //{ id: 'pg-points', url: 'http://localhost:3001/geojson/point', color: '#e74c3c' },
-    //{ id: 'pg-polygons', url: 'http://localhost:3001/geojson/polygon', color: '#f39c12' },
-    //{ id: 'pg-polyline', url: 'http://localhost:3001/geojson/polyline', color: '#3498db' },
-    { id: 'pg-poly-area', url: 'http://localhost:3001/geojson/poly_area', color: '#2ecc71' }
-  
-  ],
-
-
-
-
+        'postgres-layers': [
+            //{ id: 'pg-annotation', url: 'http://localhost:3001/geojson/annotation', color: '#1abc9c' },
+            { id: 'pg-ref-lines', url: 'http://localhost:3001/geojson/ref_lines', color: '#9b59b6' },
+            //{ id: 'pg-points', url: 'http://localhost:3001/geojson/point', color: '#e74c3c' },
+            //{ id: 'pg-polygons', url: 'http://localhost:3001/geojson/polygon', color: '#f39c12' },
+            //{ id: 'pg-polyline', url: 'http://localhost:3001/geojson/polyline', color: '#3498db' },
+            { id: 'pg-poly-area', url: 'http://localhost:3001/geojson/poly_area', color: '#2ecc71' }
+        ],
         'initial-approach': [
             { id: 'initial-points', url: 'geojson/initial_points.geojson', color: '#3498db' },
             { id: 'initial-lines', url: 'geojson/initial_lines.json', color: '#e74c3c' },
@@ -89,7 +80,7 @@ const CONFIG = {
     }
 };
 
-// ✅ Version robuste : évite les erreurs si ligne trop courte
+//  Version robuste : évite les erreurs si ligne trop courte
 function createPerpendicularLine(baseLine, projected, length = 2) {
     let coords = baseLine.geometry.coordinates;
 
@@ -121,9 +112,6 @@ function createPerpendicularLine(baseLine, projected, length = 2) {
     return turf.lineString([perp1.geometry.coordinates, perp2.geometry.coordinates]);
 }
 
-
-
-
 function extend(line, distanceKm) {
     const coords = line.type === 'Feature' ? line.geometry.coordinates : line.coordinates;
     if (!coords || coords.length < 2) {
@@ -146,10 +134,93 @@ function extend(line, distanceKm) {
       ...coords,
       extendedEnd.geometry.coordinates
     ]);
+}
+
+// Fonction d'inspection profonde pour déboguer les données
+function inspectGeometry(data, name = "Données") {
+  console.log(`===== INSPECTION: ${name} =====`);
+  
+  // Si c'est un tableau de features, examiner la première
+  if (data && Array.isArray(data) && data.length > 0) {
+    console.log(`Type de données: Array de ${data.length} éléments`);
+    
+    // Examiner le premier élément
+    const item = data[0];
+    console.log("Premier élément:", item);
+    
+    if (item && item.geometry) {
+      console.log("Type de géométrie:", item.geometry.type);
+      console.log("Propriétés:", item.properties);
+      
+      // Examiner les coordonnées
+      if (item.geometry.coordinates) {
+        console.log("Coordonnées brutes:", JSON.stringify(item.geometry.coordinates));
+        
+        // Pour MultiLineString, examiner la première ligne
+        if (item.geometry.type === "MultiLineString" && Array.isArray(item.geometry.coordinates) && item.geometry.coordinates.length > 0) {
+          console.log("Première ligne du MultiLineString:", item.geometry.coordinates[0]);
+          
+          // Examiner les coordonnées individuelles
+          if (Array.isArray(item.geometry.coordinates[0]) && item.geometry.coordinates[0].length > 0) {
+            console.log("Premier point dans la première ligne:", item.geometry.coordinates[0][0]);
+            
+            // Vérifier le type de chaque coordonnée
+            const point = item.geometry.coordinates[0][0];
+            if (Array.isArray(point) && point.length >= 2) {
+              console.log(`Longitude: ${point[0]} (${typeof point[0]})`);
+              console.log(`Latitude: ${point[1]} (${typeof point[1]})`);
+              
+              // Tester la conversion en nombre
+              console.log(`Conversion Number(longitude): ${Number(point[0])}`);
+              console.log(`isNaN check: ${isNaN(Number(point[0]))}`);
+            }
+          }
+        }
+      }
+    }
+  } else if (data && data.geometry) {
+    console.log("Type de géométrie:", data.geometry.type);
+    console.log("Coordonnées brutes:", JSON.stringify(data.geometry.coordinates));
+  } else {
+    console.log("Données invalides ou format non reconnu:", data);
   }
   
+  console.log(`===== FIN INSPECTION: ${name} =====`);
+}
 
-
+// Solution de contournement robuste pour créer une ligne avec des points valides
+function createSafeLine(startPoint, endPoint) {
+  // Utiliser des coordonnées par défaut sûres
+  const defaultStart = [10.20, 36.85];
+  const defaultEnd = [10.22, 36.86];
+  
+  let validStart = defaultStart;
+  let validEnd = defaultEnd;
+  
+  // Tenter de valider le point de départ
+  if (startPoint && Array.isArray(startPoint) && startPoint.length >= 2) {
+    const lng = parseFloat(String(startPoint[0]).replace(',', '.').trim());
+    const lat = parseFloat(String(startPoint[1]).replace(',', '.').trim());
+    
+    if (!isNaN(lng) && !isNaN(lat) && isFinite(lng) && isFinite(lat)) {
+      validStart = [lng, lat];
+    }
+  }
+  
+  // Tenter de valider le point de fin
+  if (endPoint && Array.isArray(endPoint) && endPoint.length >= 2) {
+    const lng = parseFloat(String(endPoint[0]).replace(',', '.').trim());
+    const lat = parseFloat(String(endPoint[1]).replace(',', '.').trim());
+    
+    if (!isNaN(lng) && !isNaN(lat) && isFinite(lng) && isFinite(lat)) {
+      validEnd = [lng, lat];
+    }
+  }
+  
+  // Créer et retourner une ligne sûre
+  return [validStart, validEnd];
+}
+  
 // LayerManager class
 class LayerManager {
     constructor(map, config) {
@@ -167,6 +238,52 @@ class LayerManager {
         this.setupMapInteractions();
         this.setupLayerControls();
         this.setupAdditionalControls();
+    }
+
+    // Fonction améliorée pour créer une ligne valide
+    createValidLine(coordinates) {
+      try {
+        // Paramètres d'entrée invalides
+        if (!coordinates) {
+          console.warn("createValidLine: Coordonnées manquantes");
+          return [[10.20, 36.85], [10.22, 36.86]];
+        }
+        
+        // Afficher les coordonnées d'entrée pour déboguer
+        console.log("createValidLine input:", JSON.stringify(coordinates));
+        
+        // Gérer les différents types de géométries
+        if (Array.isArray(coordinates)) {
+          // Cas 1: MultiLineString [[point1, point2...], [point1, point2...]]
+          if (coordinates.length > 0 && Array.isArray(coordinates[0]) && Array.isArray(coordinates[0][0])) {
+            console.log("Détecté format MultiLineString");
+            
+            // Prendre la première ligne du MultiLineString
+            const firstLine = coordinates[0];
+            if (firstLine.length >= 2) {
+              return createSafeLine(firstLine[0], firstLine[1]);
+            }
+          } 
+          // Cas 2: LineString [point1, point2...]
+          else if (coordinates.length >= 2 && Array.isArray(coordinates[0])) {
+            console.log("Détecté format LineString");
+            return createSafeLine(coordinates[0], coordinates[1]);
+          }
+          // Cas 3: Point unique
+          else if (coordinates.length === 1 && Array.isArray(coordinates[0])) {
+            console.log("Détecté point unique");
+            const point = coordinates[0];
+            return createSafeLine(point, [Number(point[0]) + 0.001, Number(point[1]) + 0.001]);
+          }
+        }
+        
+        // Si on arrive ici, aucun format reconnu
+        console.warn("Format de coordonnées non reconnu:", coordinates);
+        return [[10.20, 36.85], [10.22, 36.86]];
+      } catch (error) {
+        console.error("Erreur dans createValidLine:", error);
+        return [[10.20, 36.85], [10.22, 36.86]];
+      }
     }
 
     setupLayerControls() {
@@ -190,20 +307,10 @@ class LayerManager {
         document.getElementById('zoom-in').addEventListener('click', () => this.map.zoomIn());
         document.getElementById('zoom-out').addEventListener('click', () => this.map.zoomOut());
         document.getElementById('obstacles-toggle').addEventListener('click', () => this.toggleObstacles());
-
-
-
-
-
-
-
-       
-        
-
-
-
-
-
+        // Ajouter cette ligne pour le mode debug
+        if (document.getElementById('debug-mode')) {
+            document.getElementById('debug-mode').addEventListener('click', () => this.toggleDebugMode());
+        }
 
         // Add event listeners for KML import with debugging
         const importKMLButton = document.getElementById('import-kml');
@@ -265,6 +372,14 @@ class LayerManager {
             this.hideObstacles();
         }
         this.obstaclesVisible = !this.obstaclesVisible;
+    }
+
+    // Fonction pour activer/désactiver le mode débogage
+    toggleDebugMode() {
+        const isDebugMode = localStorage.getItem('debugMode') === 'true';
+        localStorage.setItem('debugMode', (!isDebugMode).toString());
+        alert(`Mode débogage ${!isDebugMode ? 'activé' : 'désactivé'}`);
+        return !isDebugMode;
     }
 
     async loadObstacleIcons() {
@@ -380,17 +495,16 @@ class LayerManager {
             }
 
             let kml;
-if (file.name.endsWith('.kmz')) {
-    const zip = await JSZip.loadAsync(file);
-    const kmlFile = Object.keys(zip.files).find(name => name.endsWith('.kml'));
-    if (!kmlFile) throw new Error("Fichier KML non trouvé dans le KMZ");
-    const kmlText = await zip.files[kmlFile].async("text");
-    kml = new DOMParser().parseFromString(kmlText, 'text/xml');
-} else {
-    const text = await file.text();
-    kml = new DOMParser().parseFromString(text, 'text/xml');
-}
-
+            if (file.name.endsWith('.kmz')) {
+                const zip = await JSZip.loadAsync(file);
+                const kmlFile = Object.keys(zip.files).find(name => name.endsWith('.kml'));
+                if (!kmlFile) throw new Error("Fichier KML non trouvé dans le KMZ");
+                const kmlText = await zip.files[kmlFile].async("text");
+                kml = new DOMParser().parseFromString(kmlText, 'text/xml');
+            } else {
+                const text = await file.text();
+                kml = new DOMParser().parseFromString(text, 'text/xml');
+            }
 
             const geojson = toGeoJSON.kml(kml);
             console.log('Converted GeoJSON:', geojson);
@@ -552,43 +666,65 @@ if (file.name.endsWith('.kmz')) {
         }
     }
 
-
-
-
-
-
-
-
-
-
-    calculateMOCSecondaire(clickedPoint, refLine, boardInfLine, boardSupLine, mocPrimaire) {
+    calculateMOCSecondaire(clickedPoint, nominalTrack, boardInfLine, boardSupLine, mocPrimaire) {
         try {
-            const projected = turf.nearestPointOnLine(refLine, clickedPoint);
-            const lineClikedToProjected = turf.lineString([clickedPoint.geometry.coordinates, projected.geometry.coordinates]);
-    
-            // Trouver l’intersection avec le bord inférieur
-            const intersection = turf.lineIntersect(lineClikedToProjected, boardInfLine);
-            if (!intersection.features.length) return null;
-    
-            const interPoint = intersection.features[0];
-            const d = turf.distance(clickedPoint, interPoint, { units: 'meters' });
+            // 1. Projection orthogonale du point cliqué sur la route nominale
+            const projected = turf.nearestPointOnLine(nominalTrack, clickedPoint);
+            
+            // 2. Créer la ligne entre le point cliqué et sa projection
+            const projectionLine = turf.lineString([
+                clickedPoint.geometry.coordinates, 
+                projected.geometry.coordinates
+            ]);
+            
+            // 3. Trouver l'intersection avec le bord inférieur (board_inf)
+            const intersectionInf = turf.lineIntersect(projectionLine, boardInfLine);
+            if (!intersectionInf.features.length) {
+                console.warn("Pas d'intersection avec le bord inférieur trouvée");
+                return null;
+            }
+            
+            // 4. Trouver l'intersection avec le bord supérieur (board_sup)
+            const intersectionSup = turf.lineIntersect(projectionLine, boardSupLine);
+            if (!intersectionSup.features.length) {
+                console.warn("Pas d'intersection avec le bord supérieur trouvée");
+                return null;
+            }
+            
+            // 5. Point d'intersection avec le bord inférieur
+            const infPoint = intersectionInf.features[0];
+            
+            // 6. Calculer la distance d entre le point cliqué et l'intersection avec bord_inf
+            const d = turf.distance(clickedPoint, infPoint, { units: 'meters' });
+            
+            // 7. Calculer la largeur totale entre board_inf et board_sup
             const largeurTotale = turf.distance(
-                turf.nearestPointOnLine(boardInfLine, projected),
-                turf.nearestPointOnLine(boardSupLine, projected),
+                intersectionInf.features[0],
+                intersectionSup.features[0],
                 { units: 'meters' }
             );
-    
-            const mocSecondaire = mocPrimaire * (1 - d / largeurTotale);
-            return mocSecondaire.toFixed(2);
+            
+            // 8. S'assurer que le ratio est entre 0 et 1
+            const ratio = Math.min(1, Math.max(0, d / largeurTotale));
+            
+            // 9. Appliquer la formule MOC Secondaire = MOC primaire * [1-(d/largeur totale)]
+            const mocSecondaire = mocPrimaire * (1 - ratio);
+            
+            // 10. Visualiser les points clés du calcul
+            this.visualizeCalculation(clickedPoint, projected, infPoint, intersectionSup.features[0]);
+            
+            // 11. Retourner le résultat avec 2 décimales
+            return {
+                mocSecondaire: mocSecondaire.toFixed(2),
+                distance: d.toFixed(2),
+                largeurTotale: largeurTotale.toFixed(2),
+                ratio: (ratio * 100).toFixed(1) // en pourcentage
+            };
         } catch (err) {
-            console.warn("Erreur calcul MOC secondaire:", err);
+            console.error("Erreur calcul MOC secondaire:", err);
             return null;
         }
     }
-    
-
-
-    
 
     async loadLayerSet(layerSetId) {
         if (this.loadedLayerSets.has(layerSetId)) {
@@ -773,115 +909,246 @@ if (file.name.endsWith('.kmz')) {
 
         this.setupMapClickHandler();
     }
+
+    // Fonction améliorée pour la gestion des clics sur la carte
     setupMapClickHandler() {
         this.map.on('click', async (e) => {
             const lngLat = e.lngLat;
             const clickedPoint = turf.point([lngLat.lng, lngLat.lat]);
-    
+            
             let popupContent = `<strong>Coordonnées</strong><br>Lat: ${lngLat.lat.toFixed(6)}<br>Lng: ${lngLat.lng.toFixed(6)}`;
-    
+            
             try {
                 // 1. Vérifier si le point est dans une zone enregistrée
                 const response = await fetch(`http://localhost:3001/api/check-area?lat=${lngLat.lat}&lng=${lngLat.lng}`);
+                
+                if (!response.ok) {
+                    throw new Error(`Erreur API: ${response.status} ${response.statusText}`);
+                }
+                
                 const result = await response.json();
-    
+                console.log("Résultat check-area:", result);
+                
+                // Cas de l'aire primaire - simple
                 if (result.areaClass === 'Primary') {
-                    // ... votre code existant ...
+                    popupContent += `<br><em>🟢 Ce point se trouve dans une <strong>Primary Area</strong></em>`;
+                    if (result.data && result.data.MOC_m) {
+                        popupContent += `<br>MOC primaire: ${result.data.MOC_m} m`;
+                    }
                 } 
+                // Cas de l'aire secondaire - avec calcul précis du MOC
                 else if (result.areaClass === 'Secondary') {
                     popupContent += `<br><em>🟠 Ce point se trouve dans une <strong>Secondary Area</strong></em>`;
                     
-                    // 2. Utiliser le endpoint /geojson/ref_lines qui est fonctionnel plutôt que les endpoints individuels
-                    const refLinesResponse = await fetch('http://localhost:3001/geojson/ref_lines');
-                    
-                    if (!refLinesResponse.ok) {
-                        throw new Error(`Impossible de récupérer les lignes de référence: ${refLinesResponse.status}`);
-                    }
-                    
-                    const refLinesData = await refLinesResponse.json();
-                    
-                    // Filtrer les lignes par type
-                    const nominalLines = refLinesData.features.filter(f => 
-                        f.properties.RefLine_Type && 
-                        f.properties.RefLine_Type.toLowerCase().includes('nominal'));
+                    try {
+                        // Récupérer les données de la zone
+                        const procedureName = result.data.Procedure_Name;
+                        const areaType = result.data.Area_Type;
                         
-                    const borderInfLines = refLinesData.features.filter(f => 
-                        f.properties.RefLine_Type && 
-                        f.properties.RefLine_Type.toLowerCase().includes('bord_inf'));
+                        // Récupérer le MOC primaire
+                        let mocPrimaire = 0;
                         
-                    const borderSupLines = refLinesData.features.filter(f => 
-                        f.properties.RefLine_Type && 
-                        f.properties.RefLine_Type.toLowerCase().includes('bord_sup'));
-                    
-                    // Vérification de la validité des données
-                    if (nominalLines.length > 0 && borderInfLines.length > 0 && borderSupLines.length > 0) {
-                        const nominalLine = nominalLines[0];
-                        const borderInfLine = borderInfLines[0];
-                        const borderSupLine = borderSupLines[0];
-                        
-                        // Vérifier la validité des géométries
-                        if (!nominalLine.geometry?.coordinates || nominalLine.geometry.coordinates.length < 2) {
-                            throw new Error("Ligne nominale invalide: pas assez de coordonnées");
+                        // Récupérer les zones
+                        const polyAreaResponse = await fetch(`http://localhost:3001/geojson/poly_area`);
+                        if (!polyAreaResponse.ok) {
+                            throw new Error(`Erreur récupération zones: ${polyAreaResponse.status}`);
                         }
+                        const polyAreasData = await polyAreaResponse.json();
                         
-                        if (!borderInfLine.geometry?.coordinates || borderInfLine.geometry.coordinates.length < 2) {
-                            throw new Error("Ligne bord_inf invalide: pas assez de coordonnées");
-                        }
+                        // Trouver la zone primaire correspondante
+                        const primaryArea = polyAreasData.features.find(
+                            feature => feature.properties.Procedure_Name === procedureName && 
+                                       feature.properties.Area_Type === 'Primary Area'
+                        );
                         
-                        if (!borderSupLine.geometry?.coordinates || borderSupLine.geometry.coordinates.length < 2) {
-                            throw new Error("Ligne bord_sup invalide: pas assez de coordonnées");
-                        }
-                        
-                        // Convertir en objets turf pour les calculs
-                        const nominalTurf = turf.lineString(nominalLine.geometry.coordinates);
-                        const borderInfTurf = turf.lineString(borderInfLine.geometry.coordinates);
-                        const borderSupTurf = turf.lineString(borderSupLine.geometry.coordinates);
-                        
-                        // 5. Calcul du MOC secondaire
-                        const projected = turf.nearestPointOnLine(nominalTurf, clickedPoint);
-                        const projectionLine = turf.lineString([clickedPoint.geometry.coordinates, projected.geometry.coordinates]);
-                        
-                        // Intersections avec les bords
-                        const intersectionInf = turf.lineIntersect(projectionLine, borderInfTurf);
-                        const intersectionSup = turf.lineIntersect(projectionLine, borderSupTurf);
-                        
-                        if (intersectionInf.features.length > 0 && intersectionSup.features.length > 0) {
-                            const infPoint = intersectionInf.features[0];
-                            const supPoint = intersectionSup.features[0];
-                            
-                            // Distances pour le calcul
-                            const distanceToInf = turf.distance(clickedPoint, infPoint, { units: 'meters' });
-                            const totalWidth = turf.distance(infPoint, supPoint, { units: 'meters' });
-                            
-                            // Calcul MOC secondaire
-                            const MOC_primaire = result.data.MOC_m || 300; // Valeur de la BDD ou par défaut
-                            const MOC_secondaire = MOC_primaire * (1 - distanceToInf / totalWidth);
-                            
-                            // Visualiser la projection pour débugger
-                            this.visualizeProjection(clickedPoint, projected, infPoint, supPoint);
-                            
-                            popupContent += `<br><strong>🧮 MOC secondaire calculée :</strong><br>
-                                Distance au bord inf: ${distanceToInf.toFixed(2)} m<br>
-                                Largeur totale: ${totalWidth.toFixed(2)} m<br>
-                                MOC primaire: ${MOC_primaire} m<br>
-                                <span style="color:#FF9900; font-weight:bold">MOC secondaire: ${MOC_secondaire.toFixed(2)} m</span>`;
+                        if (primaryArea && primaryArea.properties.MOC_m) {
+                            mocPrimaire = parseFloat(primaryArea.properties.MOC_m);
                         } else {
-                            popupContent += '<br><em>❌ Impossible de calculer les intersections avec les bords</em>';
+                            // Valeur par défaut basée sur le type de procédure
+                            if (procedureName.toLowerCase().includes('final')) {
+                                mocPrimaire = 90;
+                            } else {
+                                mocPrimaire = 165;
+                            }
                         }
-                    } else {
-                        popupContent += '<br><em>❌ Lignes de référence manquantes dans les données</em>';
-                        if (nominalLines.length === 0) popupContent += '<br>- Ligne nominale manquante';
-                        if (borderInfLines.length === 0) popupContent += '<br>- Ligne bord_inf manquante';
-                        if (borderSupLines.length === 0) popupContent += '<br>- Ligne bord_sup manquante';
+                        
+                        console.log("MOC primaire:", mocPrimaire);
+                        
+                        // Déterminer le type de secteur secondaire
+                        const isArea1 = areaType.includes('Area1');
+                        const isArea2 = areaType.includes('Area2');
+                        const isFinal = procedureName.toLowerCase().includes('final');
+                        
+                        // Récupérer toutes les lignes de référence pour une recherche plus flexible
+                        const refLinesResponse = await fetch(`http://localhost:3001/geojson/ref_lines`);
+                        if (!refLinesResponse.ok) {
+                            throw new Error(`Erreur récupération lignes: ${refLinesResponse.status}`);
+                        }
+                        const refLinesData = await refLinesResponse.json();
+                        
+                        console.log("Lignes disponibles:", refLinesData.features.map(f => f.properties.RefLine_Type));
+                        
+                        // Trouver la route nominale
+                        const nominalTrack = refLinesData.features.find(
+                            feature => feature.properties.RefLine_Type === 'Nominal Track'
+                        );
+                        
+                        if (!nominalTrack) {
+                            throw new Error("Route nominale non trouvée");
+                        }
+                        
+                        // Chercher les lignes de bord avec une correspondance partielle
+                        const areaSuffix = isArea1 ? '1' : '2';
+                        const procSuffix = isFinal ? 'final' : 'inter';
+                        
+                        // Patterns de recherche plus flexibles
+                        const infPattern = `inf${areaSuffix}${procSuffix}`.toLowerCase();
+                        const supPattern = `sup${areaSuffix}${procSuffix}`.toLowerCase();
+                        
+                        console.log("Recherche de patterns:", infPattern, supPattern);
+                        
+                        // Chercher avec correspondance partielle, plus tolérante
+                        let boardInfLine = refLinesData.features.find(
+                            feature => feature.properties.RefLine_Type && 
+                                     feature.properties.RefLine_Type.toLowerCase().includes(infPattern)
+                        );
+                        
+                        let boardSupLine = refLinesData.features.find(
+                            feature => feature.properties.RefLine_Type && 
+                                     feature.properties.RefLine_Type.toLowerCase().includes(supPattern)
+                        );
+                        
+                        // Vérifier si on a trouvé les lignes
+                        if (!boardInfLine || !boardSupLine) {
+                            console.error("Lignes non trouvées:", { 
+                                "infPattern": infPattern, 
+                                "supPattern": supPattern,
+                                "boardInfLine": boardInfLine ? boardInfLine.properties.RefLine_Type : "non trouvé",
+                                "boardSupLine": boardSupLine ? boardSupLine.properties.RefLine_Type : "non trouvé"
+                            });
+                            
+                            // Essayer une recherche encore plus large
+                            if (!boardInfLine) {
+                                boardInfLine = refLinesData.features.find(
+                                    feature => feature.properties.RefLine_Type && 
+                                             feature.properties.RefLine_Type.toLowerCase().includes('inf')
+                                );
+                            }
+                            
+                            if (!boardSupLine) {
+                                boardSupLine = refLinesData.features.find(
+                                    feature => feature.properties.RefLine_Type && 
+                                             feature.properties.RefLine_Type.toLowerCase().includes('sup')
+                                );
+                            }
+                            
+                            if (!boardInfLine || !boardSupLine) {
+                                throw new Error(`Limites non trouvées malgré recherche élargie`);
+                            }
+                        }
+                        
+                        console.log("Lignes trouvées:", boardInfLine.properties.RefLine_Type, boardSupLine.properties.RefLine_Type);
+                        
+                        // Calculer la distance précise pour un MOC variable
+                        // 1. Projection orthogonale sur la route nominale
+                        const projected = turf.nearestPointOnLine(nominalTrack, clickedPoint);
+                        
+                        // 2. Créer une ligne entre le point cliqué et sa projection
+                        const projectionLine = turf.lineString([
+                            clickedPoint.geometry.coordinates,
+                            projected.geometry.coordinates
+                        ]);
+                        
+                        // 3. Trouver l'intersection avec les limites
+                        const intersectionInf = turf.lineIntersect(projectionLine, boardInfLine);
+                        const intersectionSup = turf.lineIntersect(projectionLine, boardSupLine);
+                        
+                        let distance, largeurTotale;
+                        
+                        // Si on trouve les intersections
+                        if (intersectionInf.features.length > 0 && intersectionSup.features.length > 0) {
+                            const ptInf = intersectionInf.features[0];
+                            const ptSup = intersectionSup.features[0];
+                            
+                            // Distance du point au bord intérieur (limite avec la zone primaire)
+                            distance = turf.distance(ptInf, clickedPoint, { units: 'meters' });
+                            
+                            // Largeur totale (distance entre les deux limites)
+                            largeurTotale = turf.distance(ptInf, ptSup, { units: 'meters' });
+                        } else {
+                            // Méthode alternative - points les plus proches
+                            const ptInfProche = turf.nearestPointOnLine(boardInfLine, projected);
+                            const ptSupProche = turf.nearestPointOnLine(boardSupLine, projected);
+                            
+                            // Distance au bord intérieur
+                            distance = turf.distance(ptInfProche, clickedPoint, { units: 'meters' });
+                            
+                            // Largeur totale
+                            largeurTotale = turf.distance(ptInfProche, ptSupProche, { units: 'meters' });
+                        }
+                        
+                        // Calculer le ratio (position relative dans la zone secondaire)
+                        // 0 = limite avec la zone primaire, 1 = limite extérieure
+                        const ratio = Math.min(1, Math.max(0, distance / largeurTotale));
+                        
+                        // Calculer le MOC secondaire
+                        const mocSecondaire = mocPrimaire * (1 - ratio);
+                        
+                        // Visualiser seulement le point rouge
+                        this.visualizeSimplePoint(clickedPoint);
+                        
+                        // Afficher les résultats
+                        popupContent += `<br><strong>🧮 MOC secondaire calculée:</strong><br>
+                            Distance : ${distance.toFixed(2)} m<br>
+                            Largeur totale: ${largeurTotale.toFixed(2)} m<br>
+                            <span style="color:#FF9900; font-weight:bold">MOC secondaire: ${mocSecondaire.toFixed(2)} m</span>`;
+                    } catch (error) {
+                        console.error("Erreur lors du calcul:", error);
+                        popupContent += `<br><em>⚠️ Erreur de calcul: ${error.message}</em>`;
+                        
+                        // Méthode de secours - estimation
+                        const isArea1 = result.data.Area_Type.includes('Area1');
+                        let positionRelativeEstimee = isArea1 ? 0.3 : 0.7;
+                        
+                        // Estimer le MOC primaire
+                        // Estimer le MOC primaire
+let mocPrimaireEstime = 0;
+if (result.data.Procedure_Name) {
+    if (result.data.Procedure_Name.toLowerCase().includes('final')) {
+        mocPrimaireEstime = 90;
+    } else {
+        mocPrimaireEstime = 165;
+    }
+} else if (result.data.Area_Type) {
+    // Essayer de déduire à partir du type de zone
+    if (result.data.Area_Type.toLowerCase().includes('final')) {
+        mocPrimaireEstime = 90;
+    } else {
+        mocPrimaireEstime = 165;
+    }
+} else {
+    // Utiliser la valeur la plus conservatrice si aucune information n'est disponible
+    mocPrimaireEstime = 165;
+}
+                        
+                        // Calculer le MOC secondaire estimé
+                        const mocSecondaireEstime = mocPrimaireEstime * (1 - positionRelativeEstimee);
+                        
+                        popupContent += `<br><strong>⚠️ MOC secondaire estimée:</strong><br>
+                            MOC primaire (estimé): ${mocPrimaireEstime} m<br>
+                            Position relative estimée: ${(positionRelativeEstimee * 100).toFixed(1)}%<br>
+                            <span style="color:#FF9900">MOC secondaire: ${mocSecondaireEstime.toFixed(2)} m</span><br>
+                            <em>(Estimation basée sur le type de zone secondaire)</em>`;
                     }
                 } else {
                     popupContent += `<br><em>❓ Ce point ne se trouve dans aucune zone définie</em>`;
                 }
             } catch (err) {
-                console.error('Erreur lors du calcul MOC:', err);
+                console.error('Erreur:', err);
                 popupContent += `<br><em>⚠️ Erreur technique: ${err.message}</em>`;
             }
-    
+            
+            // Afficher le popup
             new mapboxgl.Popup()
                 .setLngLat(lngLat)
                 .setHTML(popupContent)
@@ -889,93 +1156,524 @@ if (file.name.endsWith('.kmz')) {
         });
     }
     
+    // Fonction simplifiée pour visualiser uniquement le point cliqué
+    visualizeSimplePoint(clickedPoint) {
+        try {
+            // Supprimer les visualisations précédentes
+            ['projection-line', 'points-markers'].forEach(id => {
+                if (this.map.getLayer(id)) this.map.removeLayer(id);
+                if (this.map.getSource(id)) this.map.removeSource(id);
+            });
+            
+            // Créer uniquement le point
+            const points = {
+                type: 'FeatureCollection',
+                features: [
+                    {...clickedPoint, properties: {type: 'clicked'}}
+                ]
+            };
+            
+            // Ajouter la source
+            this.map.addSource('points-markers', {
+                type: 'geojson',
+                data: points
+            });
+            
+            // Ajouter la couche
+            this.map.addLayer({
+                id: 'points-markers',
+                type: 'circle',
+                source: 'points-markers',
+                paint: {
+                    'circle-radius': 5,
+                    'circle-color': '#FF0000',    // Point en rouge
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#FFFFFF'
+                }
+            });
+        } catch (error) {
+            console.error("Erreur lors de la visualisation:", error);
+        }
+    }
     
+    // Visualiser uniquement le point cliqué (en rouge)
+    visualizeSimplePoint(clickedPoint) {
+        try {
+            // Supprimer les visualisations précédentes
+            ['projection-line', 'points-markers'].forEach(id => {
+                if (this.map.getLayer(id)) this.map.removeLayer(id);
+                if (this.map.getSource(id)) this.map.removeSource(id);
+            });
+            
+            // Créer uniquement le point
+            const points = {
+                type: 'FeatureCollection',
+                features: [
+                    {...clickedPoint, properties: {type: 'clicked'}}
+                ]
+            };
+            
+            // Ajouter la source
+            this.map.addSource('points-markers', {
+                type: 'geojson',
+                data: points
+            });
+            
+            // Ajouter la couche
+            this.map.addLayer({
+                id: 'points-markers',
+                type: 'circle',
+                source: 'points-markers',
+                paint: {
+                    'circle-radius': 5,
+                    'circle-color': '#FF0000',    // Point en rouge
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#FFFFFF'
+                }
+            });
+        } catch (error) {
+            console.error("Erreur lors de la visualisation:", error);
+        }
+    }
     
-    // Méthode auxiliaire pour visualiser la projection
-    visualizeProjection(clickedPoint, projectedPoint, borderInfPoint, borderSupPoint) {
-        // Supprimer les visualisations précédentes
-        ['projection-line', 'points-markers'].forEach(id => {
-            if (this.map.getLayer(id)) this.map.removeLayer(id);
-            if (this.map.getSource(id)) this.map.removeSource(id);
-        });
+    // Fonction simplifiée pour visualiser uniquement le point cliqué
+    visualizeSimplePoint(clickedPoint) {
+        try {
+            // Supprimer les visualisations précédentes
+            ['projection-line', 'points-markers'].forEach(id => {
+                if (this.map.getLayer(id)) this.map.removeLayer(id);
+                if (this.map.getSource(id)) this.map.removeSource(id);
+            });
+            
+            // Créer uniquement le point
+            const points = {
+                type: 'FeatureCollection',
+                features: [
+                    {...clickedPoint, properties: {type: 'clicked'}}
+                ]
+            };
+            
+            // Ajouter la source
+            this.map.addSource('points-markers', {
+                type: 'geojson',
+                data: points
+            });
+            
+            // Ajouter la couche
+            this.map.addLayer({
+                id: 'points-markers',
+                type: 'circle',
+                source: 'points-markers',
+                paint: {
+                    'circle-radius': 5,
+                    'circle-color': '#FF0000',    // Point en rouge
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#FFFFFF'
+                }
+            });
+        } catch (error) {
+            console.error("Erreur lors de la visualisation:", error);
+        }
+    }
+    // Amélioration de la fonction de calcul du MOC secondaire
+    calculateMOCSecondaire(clickedPoint, nominalTrack, boardInfLine, boardSupLine, mocPrimaire) {
+        try {
+            console.log("Calcul MOC secondaire avec:", {
+                mocPrimaire,
+                "nominalTrack": !!nominalTrack,
+                "boardInfLine": !!boardInfLine,
+                "boardSupLine": !!boardSupLine
+            });
+            
+            // Vérifier les entrées
+            if (!clickedPoint || !nominalTrack || !boardInfLine || !boardSupLine || !mocPrimaire) {
+                console.error("Paramètres manquants", {
+                    clickedPoint: !!clickedPoint,
+                    nominalTrack: !!nominalTrack,
+                    boardInfLine: !!boardInfLine,
+                    boardSupLine: !!boardSupLine,
+                    mocPrimaire: mocPrimaire
+                });
+                throw new Error("Paramètres manquants pour le calcul");
+            }
+            
+            // Si mocPrimaire n'est pas un nombre, le convertir ou utiliser une valeur par défaut
+            if (isNaN(parseFloat(mocPrimaire))) {
+                console.warn("MOC primaire invalide:", mocPrimaire);
+                mocPrimaire = 150; // Valeur par défaut
+            } else {
+                mocPrimaire = parseFloat(mocPrimaire);
+            }
+            
+            // 1. Projection orthogonale du point cliqué sur la route nominale
+            const projected = turf.nearestPointOnLine(nominalTrack, clickedPoint);
+            
+            // 2. Créer la ligne entre le point cliqué et sa projection
+            const projectionLine = turf.lineString([
+                clickedPoint.geometry.coordinates, 
+                projected.geometry.coordinates
+            ]);
+            
+            // 3. Créer des représentations linéaires des limites si ce sont des polygones
+            let infLineString, supLineString;
+            
+            if (boardInfLine.geometry.type === 'Polygon' || boardInfLine.geometry.type === 'MultiPolygon') {
+                infLineString = turf.polygonToLine(boardInfLine);
+            } else {
+                infLineString = boardInfLine;
+            }
+            
+            if (boardSupLine.geometry.type === 'Polygon' || boardSupLine.geometry.type === 'MultiPolygon') {
+                supLineString = turf.polygonToLine(boardSupLine);
+            } else {
+                supLineString = boardSupLine;
+            }
+            
+            // 4. Trouver les intersections avec les bords
+            const intersectionInf = turf.lineIntersect(projectionLine, infLineString);
+            
+            if (!intersectionInf.features.length) {
+                console.warn("Pas d'intersection avec le bord inférieur trouvée, utilisant la distance directe");
+                
+                // Alternative: utiliser la distance directe à la ligne
+                const infPoint = turf.nearestPointOnLine(infLineString, clickedPoint);
+                const supPoint = turf.nearestPointOnLine(supLineString, clickedPoint);
+                
+                const d = turf.distance(clickedPoint, infPoint, { units: 'meters' });
+                const largeurTotale = turf.distance(infPoint, supPoint, { units: 'meters' });
+                
+                // S'assurer que le ratio est entre 0 et 1
+                const ratio = Math.min(1, Math.max(0, d / largeurTotale));
+                
+                // Appliquer la formule
+                const mocSecondaire = mocPrimaire * (1 - ratio);
+                
+                // Visualiser le point
+                this.visualizeSimplePoint(clickedPoint);
+                
+                return {
+                    mocSecondaire: mocSecondaire.toFixed(2),
+                    distance: d.toFixed(2),
+                    largeurTotale: largeurTotale.toFixed(2),
+                    ratio: (ratio * 100).toFixed(1)
+                };
+            }
+            
+            // 5. Point d'intersection avec le bord inférieur
+            const infPoint = intersectionInf.features[0];
+            
+            // 6. Calculer la distance d entre le point cliqué et l'intersection avec bord_inf
+            const d = turf.distance(clickedPoint, infPoint, { units: 'meters' });
+            
+            // 7. Calculer la largeur totale entre les bords
+            let largeurTotale;
+            
+            const intersectionSup = turf.lineIntersect(projectionLine, supLineString);
+            if (intersectionSup.features.length) {
+                largeurTotale = turf.distance(
+                    infPoint,
+                    intersectionSup.features[0],
+                    { units: 'meters' }
+                );
+            } else {
+                // Si pas d'intersection avec le bord supérieur, estimer avec le point le plus proche
+                const supPoint = turf.nearestPointOnLine(supLineString, projected);
+                largeurTotale = turf.distance(infPoint, supPoint, { units: 'meters' });
+            }
+            
+            // 8. S'assurer que le ratio est entre 0 et 1
+            const ratio = Math.min(1, Math.max(0, d / largeurTotale));
+            
+            // 9. Appliquer la formule MOC Secondaire = MOC primaire * [1-(d/largeur totale)]
+            const mocSecondaire = mocPrimaire * (1 - ratio);
+            
+            // 10. Visualiser seulement le point cliqué
+            this.visualizeSimplePoint(clickedPoint);
+            
+            // 11. Retourner le résultat avec 2 décimales
+            return {
+                mocSecondaire: mocSecondaire.toFixed(2),
+                distance: d.toFixed(2),
+                largeurTotale: largeurTotale.toFixed(2),
+                ratio: (ratio * 100).toFixed(1)
+            };
+        } catch (err) {
+            console.error("Erreur calcul MOC secondaire:", err);
+            return null;
+        }
+    }
     
-        // 1. Ligne de projection
-        const visualizationLines = {
-            type: 'FeatureCollection',
-            features: [
-                // Ligne de projection du point cliqué vers la ligne nominale
+    // Fonction simplifiée pour visualiser uniquement le point cliqué
+    visualizeSimplePoint(clickedPoint) {
+        try {
+            // Supprimer les visualisations précédentes
+            ['projection-line', 'points-markers'].forEach(id => {
+                if (this.map.getLayer(id)) this.map.removeLayer(id);
+                if (this.map.getSource(id)) this.map.removeSource(id);
+            });
+            
+            // Créer uniquement le point
+            const points = {
+                type: 'FeatureCollection',
+                features: [
+                    {...clickedPoint, properties: {type: 'clicked'}}
+                ]
+            };
+            
+            // Ajouter la source
+            this.map.addSource('points-markers', {
+                type: 'geojson',
+                data: points
+            });
+            
+            // Ajouter la couche
+            this.map.addLayer({
+                id: 'points-markers',
+                type: 'circle',
+                source: 'points-markers',
+                paint: {
+                    'circle-radius': 5,
+                    'circle-color': '#FF0000',    // Point en rouge
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#FFFFFF'
+                }
+            });
+        } catch (error) {
+            console.error("Erreur lors de la visualisation:", error);
+        }
+    }
+
+    // Méthode pour visualiser les calculs
+    visualizeCalculation(clickedPoint, projectedPoint, infPoint, supPoint) {
+        try {
+            // Supprimer les visualisations précédentes
+            ['projection-line', 'points-markers'].forEach(id => {
+                if (this.map.getLayer(id)) this.map.removeLayer(id);
+                if (this.map.getSource(id)) this.map.removeSource(id);
+            });
+            
+            // Créer uniquement la ligne de projection orthogonale
+            const lineFeatures = [
                 turf.lineString([
                     clickedPoint.geometry.coordinates,
                     projectedPoint.geometry.coordinates
-                ]),
-                // Ligne entre les bords pour montrer la largeur totale
-                turf.lineString([
-                    borderInfPoint.geometry.coordinates,
-                    borderSupPoint.geometry.coordinates
-                ])
-            ]
-        };
-    
-        // 2. Points importants du calcul
-        const points = {
-            type: 'FeatureCollection',
-            features: [
-                {...clickedPoint, properties: {type: 'clicked'}},
-                {...projectedPoint, properties: {type: 'projected'}},
-                {...borderInfPoint, properties: {type: 'border-inf'}},
-                {...borderSupPoint, properties: {type: 'border-sup'}}
-            ]
-        };
-    
-        // Ajouter les sources
-        this.map.addSource('projection-line', {
-            type: 'geojson',
-            data: visualizationLines
-        });
-    
-        this.map.addSource('points-markers', {
-            type: 'geojson',
-            data: points
-        });
-    
-        // Ajouter les couches
-        this.map.addLayer({
-            id: 'projection-line',
-            type: 'line',
-            source: 'projection-line',
-            paint: {
-                'line-color': ['match', 
-                    ['array-index', ['get', 'coordinates'], 0],
-                    0, '#FF0000', // Ligne de projection en rouge
-                    '#0088FF'  // Ligne de largeur en bleu
-                ],
-                'line-width': 2,
-                'line-dasharray': [2, 2]
-            }
-        });
-    
-        this.map.addLayer({
-            id: 'points-markers',
-            type: 'circle',
-            source: 'points-markers',
-            paint: {
-                'circle-radius': 5,
-                'circle-color': [
-                    'match',
-                    ['get', 'type'],
-                    'clicked', '#FF0000',    // Point cliqué en rouge
-                    'projected', '#00FF00',  // Point projeté en vert
-                    'border-inf', '#0088FF', // Bord inf en bleu clair
-                    'border-sup', '#0044AA', // Bord sup en bleu foncé
-                    '#FFFF00'  // Par défaut en jaune
-                ],
-                'circle-stroke-width': 2,
-                'circle-stroke-color': '#FFFFFF'
-            }
-        });
+                ], {type: 'projection'})
+            ];
+            
+            // Créer seulement le point cliqué (rouge)
+            const pointsFeatures = [
+                {...clickedPoint, properties: {type: 'clicked'}}
+            ];
+            
+            // Créer les collections GeoJSON
+            const points = {
+                type: 'FeatureCollection',
+                features: pointsFeatures
+            };
+            
+            const lines = {
+                type: 'FeatureCollection',
+                features: lineFeatures
+            };
+            
+            // Ajouter les sources
+            this.map.addSource('points-markers', {
+                type: 'geojson',
+                data: points
+            });
+            
+            this.map.addSource('projection-line', {
+                type: 'geojson',
+                data: lines
+            });
+            
+            // Ajouter seulement le point rouge (point cliqué)
+            this.map.addLayer({
+                id: 'points-markers',
+                type: 'circle',
+                source: 'points-markers',
+                paint: {
+                    'circle-radius': 5,
+                    'circle-color': '#FF0000',  // Point cliqué en rouge
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#FFFFFF'
+                }
+            });
+            
+            // Ajouter la ligne de projection (mais en pointillés rouge)
+            this.map.addLayer({
+                id: 'projection-line',
+                type: 'line',
+                source: 'projection-line',
+                paint: {
+                    'line-color': '#FF0000',
+                    'line-width': 2,
+                    'line-dasharray': [2, 2]
+                }
+            });
+        } catch (error) {
+            console.error("Erreur lors de la visualisation:", error);
+            // Visualisation de secours
+            this.visualizeSimplePoint(clickedPoint);
+        }
     }
+    // Fonction simplifiée pour visualiser uniquement le point cliqué
+    // Fonction simplifiée pour visualiser uniquement le point cliqué
+    visualizeSimplePoint(clickedPoint) {
+        try {
+            // Supprimer les visualisations précédentes
+            ['projection-line', 'points-markers'].forEach(id => {
+                if (this.map.getLayer(id)) this.map.removeLayer(id);
+                if (this.map.getSource(id)) this.map.removeSource(id);
+            });
+            
+            // 1. Créer uniquement un point
+            const points = {
+                type: 'FeatureCollection',
+                features: [
+                    {...clickedPoint, properties: {type: 'clicked'}}
+                ]
+            };
+            
+            // Ajouter la source
+            this.map.addSource('points-markers', {
+                type: 'geojson',
+                data: points
+            });
+            
+            // Ajouter la couche
+            this.map.addLayer({
+                id: 'points-markers',
+                type: 'circle',
+                source: 'points-markers',
+                paint: {
+                    'circle-radius': 5,
+                    'circle-color': '#FF0000',    // Point en rouge
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#FFFFFF'
+                }
+            });
+        } catch (error) {
+            console.error("Erreur lors de la visualisation:", error);
+        }
+    }
+
+    // Méthode améliorée pour visualiser la projection (ancienne méthode conservée pour référence)
+    visualizeProjection(clickedPoint, projectedPoint, borderInfPoint, borderSupPoint) {
+        try {
+            // S'assurer que tous les points sont valides
+            const isValidPoint = (point) => {
+                return point && point.geometry && point.geometry.coordinates && 
+                       Array.isArray(point.geometry.coordinates) && 
+                       point.geometry.coordinates.length >= 2;
+            };
+            
+            // Si certains points sont invalides, essayer de les réparer
+            if (!isValidPoint(clickedPoint)) {
+                console.warn("Point cliqué invalide");
+                return;
+            }
+            
+            if (!isValidPoint(projectedPoint)) {
+                console.warn("Point projeté invalide, création d'une alternative");
+                projectedPoint = turf.point([clickedPoint.geometry.coordinates[0], clickedPoint.geometry.coordinates[1] + 0.001]);
+            }
+            
+            if (!isValidPoint(borderInfPoint)) {
+                console.warn("Point de bord inférieur invalide, création d'une alternative");
+                borderInfPoint = turf.point([projectedPoint.geometry.coordinates[0] - 0.001, projectedPoint.geometry.coordinates[1] - 0.001]);
+            }
+            
+            if (!isValidPoint(borderSupPoint)) {
+                console.warn("Point de bord supérieur invalide, création d'une alternative");
+                borderSupPoint = turf.point([projectedPoint.geometry.coordinates[0] + 0.001, projectedPoint.geometry.coordinates[1] + 0.001]);
+            }
+            
+            // Supprimer les visualisations précédentes
+            ['projection-line', 'points-markers'].forEach(id => {
+                if (this.map.getLayer(id)) this.map.removeLayer(id);
+                if (this.map.getSource(id)) this.map.removeSource(id);
+            });
         
-    
+            // 1. Créer les lignes de visualisation
+            const visualizationLines = {
+                type: 'FeatureCollection',
+                features: [
+                    // Ligne de projection du point cliqué vers la ligne nominale
+                    turf.lineString([
+                        clickedPoint.geometry.coordinates,
+                        projectedPoint.geometry.coordinates
+                    ]),
+                    // Ligne entre les bords pour montrer la largeur totale
+                    turf.lineString([
+                        borderInfPoint.geometry.coordinates,
+                        borderSupPoint.geometry.coordinates
+                    ])
+                ]
+            };
+        
+            // 2. Points importants du calcul
+            const points = {
+                type: 'FeatureCollection',
+                features: [
+                    {...clickedPoint, properties: {type: 'clicked'}},
+                    {...projectedPoint, properties: {type: 'projected'}},
+                    {...borderInfPoint, properties: {type: 'border-inf'}},
+                    {...borderSupPoint, properties: {type: 'border-sup'}}
+                ]
+            };
+        
+            // Ajouter les sources
+            this.map.addSource('projection-line', {
+                type: 'geojson',
+                data: visualizationLines
+            });
+        
+            this.map.addSource('points-markers', {
+                type: 'geojson',
+                data: points
+            });
+        
+            // Ajouter les couches
+            this.map.addLayer({
+                id: 'projection-line',
+                type: 'line',
+                source: 'projection-line',
+                paint: {
+                    'line-color': ['match', 
+                        ['array-index', ['get', 'coordinates'], 0],
+                        0, '#FF0000', // Ligne de projection en rouge
+                        '#0088FF'  // Ligne de largeur en bleu
+                    ],
+                    'line-width': 2,
+                    'line-dasharray': [2, 2]
+                }
+            });
+        
+            this.map.addLayer({
+                id: 'points-markers',
+                type: 'circle',
+                source: 'points-markers',
+                paint: {
+                    'circle-radius': 5,
+                    'circle-color': [
+                        'match',
+                        ['get', 'type'],
+                        'clicked', '#FF0000',    // Point cliqué en rouge
+                        'projected', '#00FF00',  // Point projeté en vert
+                        'border-inf', '#0088FF', // Bord inf en bleu clair
+                        'border-sup', '#0044AA', // Bord sup en bleu foncé
+                        '#FFFF00'  // Par défaut en jaune
+                    ],
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#FFFFFF'
+                }
+            });
+        } catch (error) {
+            console.error("Erreur lors de la visualisation:", error);
+        }
+    }
+
     isPointLeftOfLine(start, end, point) {
         // Vérification des paramètres
         if (!start || !end || !point) {
@@ -994,13 +1692,10 @@ if (file.name.endsWith('.kmz')) {
                 (end[1] - start[1]) * (point[0] - start[0])) > 0;
     }
     
-
     getElevation(lngLat) {
         // Placeholder: Replace with real elevation data source if available
         return 100; // Example elevation in meters
     }
-
-
 
     extendLineSegment(line, km = 1) {
         if (!line || line.geometry.type !== "LineString") return line;
@@ -1024,19 +1719,6 @@ if (file.name.endsWith('.kmz')) {
     
         return turf.lineString(extendedCoords);
     }
-    
-    
-    
-
-
-
-
-
-
-
-
-
-
 
     getLayerSetName(layerId) {
         for (const [setId, layers] of Object.entries(this.config.layerSets)) {

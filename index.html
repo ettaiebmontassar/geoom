@@ -34,12 +34,16 @@
                         <button id="toggle-3d"><i class="fas fa-cube"></i> Toggle 3D</button>
                         <button id="mini-map"><i class="fas fa-map"></i> Mini Map</button>
                     </div>
+                    <!-- Ajout du bouton Debug Mode -->
+                    <div class="surface-item navigation-item">
+                        <button id="debug-mode"><i class="fas fa-bug"></i> Mode Debug</button>
+                    </div>
                     <label><input type="checkbox" class="layer-checkbox" id="postgres-layers"> Couches PostGIS</label>
 
                     <div class="surface-item navigation-item">
                         <button id="obstacles-toggle"><i class="fas fa-exclamation-triangle"></i> Obstacles</button>
                         <button id="import-kml"><i class="fas fa-file-import"></i> Import KML</button>
-                        <input type="file" id="kml-file-input" accept=".kml" style="display: none;">
+                        <input type="file" id="kml-file-input" accept=".kml,.kmz" style="display: none;">
                     </div>
                 </div>
                 <div class="layer-group">
